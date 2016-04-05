@@ -52,8 +52,8 @@ const (
 
 // Encode/Write errors
 var (
-	ErrorBufferOverflow = fmt.Errorf("buffer overflow")
-	ErrorMaxValue       = fmt.Errorf("value exceeds max value")
+	ErrorBufferOverflow = fmt.Errorf("unum.ErrorBufferOverflow")
+	ErrorMaxValue       = fmt.Errorf("unum.ErrorMaxValue")
 )
 
 // unum encodes the value v in buffer buf.
@@ -124,33 +124,34 @@ func WriteUint(w io.Writer, v uint64) (n int, e error) {
 
 // Decode/Read errors
 var (
-	ErrorBufferUnderflow = fmt.Errorf("buffer underflow")
-	ErrorInvalidBuffer   = fmt.Errorf("invalid buffer")
+	ErrorBufferEOF     = fmt.Errorf("unum.ErrorBufferEOF")
+	ErrorInvalidBuffer = fmt.Errorf("unum.ErrorInvalidBuffer")
 )
 
 // decodes unum encoded unsigned integer value v from input buffer b.
 // returns cLUW v, number of bytes n, if there are no errors.
 //
 // On error returns (0, 0, e) where e is:
-//    ErrorBufferUnderflow -- invalid arg b : len(b) < n
+//    ErrorBufferEOF -- invalid arg b : len(b) < n
 //    ErrorInvalidBuffer   -- invalid arg b : non-conformant byte sequence
 func DecodeUint(b []byte) (v uint64, n int, e error) {
 	if len(b) == 0 {
-		return 0, 0, ErrorBufferUnderflow
+		return 0, 0, ErrorBufferEOF
 	}
+
 	switch b[0] & 0xc0 {
 	case 0:
 		return uint64(b[0] & 0x3f), 1, nil
 	case 0x40:
 		if len(b) < 2 {
-			return 0, 0, ErrorBufferUnderflow
+			return 0, 0, ErrorInvalidBuffer
 		}
 		v = uint64(b[0]&0x3f)<<8 |
 			uint64(b[1])
 		return v, 2, nil
 	case 0x80:
 		if len(b) < 4 {
-			return 0, 0, ErrorBufferUnderflow
+			return 0, 0, ErrorInvalidBuffer
 		}
 		v = uint64(b[0]&0x3f)<<24 |
 			uint64(b[1])<<16 |
@@ -159,7 +160,7 @@ func DecodeUint(b []byte) (v uint64, n int, e error) {
 		return v, 4, nil
 	case 0xc0:
 		if len(b) < 8 {
-			return 0, 0, ErrorBufferUnderflow
+			return 0, 0, ErrorInvalidBuffer
 		}
 		v = uint64(b[0]&0x3f)<<56 |
 			uint64(b[1])<<48 |
@@ -178,21 +179,33 @@ func DecodeUint(b []byte) (v uint64, n int, e error) {
 // Returns value v, number of bytes read n (n > 0), if there are no errors.
 //
 // On error returns (0, 0, e) where e is:
-//    ErrorBufferUnderflow -- invalid arg b : len(b) < n
+//    ErrorBufferEOF -- invalid arg b : len(b) < n
 //    ErrorInvalidBuffer   -- invalid arg b : non-conformant byte sequence
 //    <other>              -- propagated io.Reader.Read error
+//
+// Note that ErrorInvalidBuffer
 func ReadUint(r io.Reader) (v uint64, n int, e error) {
+	// REVU: error handling can be cleaner (i.e. io.EOF -> Underflow)
+	//
 	var b [8]byte
 	n, e = r.Read(b[:1])
 	if e != nil {
+		if e == io.EOF {
+			e = ErrorBufferEOF
+		}
 		return
 	}
 
-	vlen := (b[0] & 0xc0) >> 6
+	// compute expected encoded len directly
+	// and read the remaining bytes (if any)
+	vlen := 1 << (b[0] >> 6)
 	if vlen > 1 {
 		n, e = io.ReadFull(r, b[1:vlen])
 		if e != nil {
 			n += 1
+			if e == io.EOF {
+				e = ErrorInvalidBuffer
+			}
 			return
 		}
 	}
