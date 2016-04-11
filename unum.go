@@ -42,6 +42,9 @@ import (
 	"io"
 )
 
+// unsigned int max values
+const Unum64MaxValue = uint64(0x4000000000000000)
+
 // unsigned int value masks
 const (
 	uint6mask  = uint8(0x3f)
