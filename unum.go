@@ -68,20 +68,17 @@ import (
 	//	"goerror" // REVU: use goerror
 )
 
-// REVU: these are not max values, they are upper bounds. (0, bound]
-// unsigned int max values
+const (
+	Unum64Size = 8
+	Unum32Size = 4
+	Unum16Size = 2
+)
+
+// unsigned int exclusive upper bound values
 const (
 	Unum64ValueBound = uint64(0x4000000000000000)
 	Unum32ValueBound = uint32(0x40000000)
-	Unum16ValueBound = uint32(0x8000)
-)
-
-// unsigned int value masks
-const (
-	uint6mask  = uint8(0x3f)
-	uint14mask = uint16(0x3fff)
-	uint30mask = uint32(0x3fffffff)
-	uint62mask = uint64(0x3fffffffffffffff)
+	Unum16ValueBound = uint16(0x8000)
 )
 
 // Encode/Write errors

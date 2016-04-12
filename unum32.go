@@ -6,14 +6,14 @@ import (
 	"io"
 )
 
-// UNUM-64 encodes the value v in buffer buf.
-// returns number of bytes written { 1, 2, 4, 8 } on nil
+// UNUM-32 encodes the value v in buffer buf.
+// returns number of bytes written { 1, 2, 3, 4 } on nil
 // error.
 //
 // On error returns (0, e) where e is:
 //    ErrorBufferOverflow  -- invalid arg b : len(b) < n
-//    ErrorMaxValue        -- invalid arg v : v > 2^62
-func EncodeUnum64(b []byte, v uint64) (n int, e error) {
+//    ErrorMaxValue        -- invalid arg v : v > 2^30
+func EncodeUnum32(b []byte, v uint32) (n int, e error) {
 	switch {
 	case v < 0x40:
 		if len(b) < 1 {
@@ -28,28 +28,23 @@ func EncodeUnum64(b []byte, v uint64) (n int, e error) {
 		b[0] = byte(v>>8) | 0x40
 		b[1] = byte(v)
 		return 2, nil
+	case v < 0x400000:
+		if len(b) < 3 {
+			return 0, ErrorBufferOverflow
+		}
+		b[0] = byte(v>>16) | 0x80
+		b[1] = byte(v >> 8)
+		b[2] = byte(v)
+		return 3, nil
 	case v < 0x40000000:
 		if len(b) < 4 {
 			return 0, ErrorBufferOverflow
 		}
-		b[0] = byte(v>>24) | 0x80
+		b[0] = byte(v>>24) | 0xc0
 		b[1] = byte(v >> 16)
 		b[2] = byte(v >> 8)
 		b[3] = byte(v)
 		return 4, nil
-	case v < 0x4000000000000000:
-		if len(b) < 8 {
-			return 0, ErrorBufferOverflow
-		}
-		b[0] = byte(v>>56) | 0xc0
-		b[1] = byte(v >> 48)
-		b[2] = byte(v >> 40)
-		b[3] = byte(v >> 32)
-		b[4] = byte(v >> 24)
-		b[5] = byte(v >> 16)
-		b[6] = byte(v >> 8)
-		b[7] = byte(v)
-		return 8, nil
 	default:
 		return 0, ErrorMaxValue
 	}
@@ -61,65 +56,60 @@ func EncodeUnum64(b []byte, v uint64) (n int, e error) {
 //
 // On error returns (0, e) where e is:
 //    ErrorBufferOverflow  -- invalid arg b : len(b) < n
-//    ErrorMaxValue        -- invalid arg v : v > 2^62
+//    ErrorMaxValue        -- invalid arg v : v > 2^30
 //    <other>              -- propagated io.Writer.Write error
-func WriteUnum64(w io.Writer, v uint64) (n int, e error) {
-	var b [Unum64Size]byte
-	n0, e0 := EncodeUnum64(b[0:], v)
+func WriteUnum32(w io.Writer, v uint32) (n int, e error) {
+	var b [4]byte
+	n0, e0 := EncodeUnum32(b[0:], v)
 	if e0 != nil {
 		return 0, e0
 	}
 	return w.Write(b[:n0])
 }
 
-// decodes UNUM-64 encoded unsigned integer value v from input buffer b.
+// decodes UNUM-32 encoded unsigned integer value v from input buffer b.
 // returns cLUW v, number of bytes n, if there are no errors.
 //
 // On error returns (0, 0, e) where e is:
 //    ErrorBufferEOF -- invalid arg b : len(b) < n
 //    ErrorInvalidBuffer   -- invalid arg b : non-conformant byte sequence
-func DecodeUnum64(b []byte) (v uint64, n int, e error) {
+func DecodeUnum32(b []byte) (v uint32, n int, e error) {
 	if len(b) == 0 {
 		return 0, 0, ErrorBufferEOF
 	}
 
 	switch b[0] & 0xc0 {
 	case 0:
-		return uint64(b[0] & 0x3f), 1, nil
+		return uint32(b[0] & 0x3f), 1, nil
 	case 0x40:
 		if len(b) < 2 {
 			return 0, 0, ErrorInvalidBuffer
 		}
-		v = uint64(b[0]&0x3f)<<8 |
-			uint64(b[1])
+		v = uint32(b[0]&0x3f)<<8 |
+			uint32(b[1])
 		return v, 2, nil
 	case 0x80:
+		if len(b) < 3 {
+			return 0, 0, ErrorInvalidBuffer
+		}
+		v = uint32(b[0]&0x3f)<<16 |
+			uint32(b[1])<<8 |
+			uint32(b[2])
+		return v, 3, nil
+	case 0xc0:
 		if len(b) < 4 {
 			return 0, 0, ErrorInvalidBuffer
 		}
-		v = uint64(b[0]&0x3f)<<24 |
-			uint64(b[1])<<16 |
-			uint64(b[2])<<8 |
-			uint64(b[3])
+		v = uint32(b[0]&0x3f)<<24 |
+			uint32(b[1])<<16 |
+			uint32(b[2])<<8 |
+			uint32(b[3])
 		return v, 4, nil
-	case 0xc0:
-		if len(b) < 8 {
-			return 0, 0, ErrorInvalidBuffer
-		}
-		v = uint64(b[0]&0x3f)<<56 |
-			uint64(b[1])<<48 |
-			uint64(b[2])<<40 |
-			uint64(b[3])<<32 |
-			uint64(b[4])<<24 |
-			uint64(b[5])<<16 |
-			uint64(b[6])<<8 |
-			uint64(b[7])
-		return v, 8, nil
 	}
 	panic("bug - asserted unreachable")
 }
 
-// Reads UNUM-64 encoded usigned integer value from Reader r.
+// Reads UNUM-32 encoded usigned integer value from Reader r.
 // Returns value v, number of bytes read n (n > 0), if there are no errors.
 //
 // On error returns (0, 0, e) where e is:
@@ -128,10 +118,10 @@ func DecodeUnum64(b []byte) (v uint64, n int, e error) {
 //    <other>              -- propagated io.Reader.Read error
 //
 // Note that ErrorInvalidBuffer
-func ReadUint(r io.Reader) (v uint64, n int, e error) {
+func ReadUnum32(r io.Reader) (v uint32, n int, e error) {
 	// REVU: error handling can be cleaner (i.e. io.EOF -> Underflow)
 	//
-	var b [Unum64Size]byte
+	var b [4]byte
 	n, e = r.Read(b[:1])
 	if e != nil {
 		if e == io.EOF {
@@ -153,5 +143,5 @@ func ReadUint(r io.Reader) (v uint64, n int, e error) {
 			return
 		}
 	}
-	return DecodeUnum64(b[0:])
+	return DecodeUnum32(b[0:])
 }

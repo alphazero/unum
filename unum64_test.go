@@ -9,24 +9,22 @@ import (
 	"unum"
 )
 
+/*
 func BenchmarkRandGenForReference(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		// encode
 		v := uint64(rand.Int63n(int64(unum.Unum64ValueBound)))
 		if v < 0 {
 			b.Errorf("dummy test - just insure loop is not optimized away!\n")
 		}
 	}
 }
-
+*/
 func BenchmarkEncodeUnum64(b *testing.B) {
-	//	v := uint64(rand.Int63n(int64(unum.Unum64ValueBound)))
-	var vb0 [8]byte
+	v := uint64(rand.Int63n(int64(unum.Unum64ValueBound)))
+	var vb0 [unum.Unum64Size]byte
 	vb := vb0[:]
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// encode
-		v := uint64(rand.Int63n(int64(unum.Unum64ValueBound)))
 		_, e := unum.EncodeUnum64(vb, v)
 		if e != nil {
 			b.Errorf("error encoding - v:%d - e:%s\n", v, e.Error())
@@ -36,7 +34,7 @@ func BenchmarkEncodeUnum64(b *testing.B) {
 
 func BenchmarkDecodeUnum64(b *testing.B) {
 	v := uint64(rand.Int63n(int64(unum.Unum64ValueBound)))
-	var vb0 [8]byte
+	var vb0 [unum.Unum64Size]byte
 	vb := vb0[:]
 	_, e := unum.EncodeUnum64(vb, v)
 	if e != nil {
@@ -44,7 +42,6 @@ func BenchmarkDecodeUnum64(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// encode
 		_, _, e := unum.DecodeUnum64(vb)
 		if e != nil {
 			b.Errorf("error encoding - v:%d - e:%s\n", v, e.Error())
@@ -57,7 +54,7 @@ func TestCodecUnum64(t *testing.T) {
 		if v >= unum.Unum64ValueBound {
 			return true // ignore max values
 		}
-		var b0 [8]byte
+		var b0 [unum.Unum64Size]byte
 		b := b0[:]
 
 		// encode
@@ -72,7 +69,7 @@ func TestCodecUnum64(t *testing.T) {
 			t.Errorf("error decoding - v:%d - e:%s\n", v, e.Error())
 		}
 		if v0 != v {
-			t.Errorf("BUG - v:%d - v0%d\n", v, v0)
+			t.Errorf("BUG - v:%08x - v0:%08x\n", v, v0)
 		}
 		return true
 	}
