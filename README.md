@@ -1,29 +1,26 @@
 ![image](./resources/unum-logo.png)
 
-####stat
-    star date         04 04 16
-
-    specification     John Gustafson | "Right-Sizing Precision" (presentation) 
-    api               stable 
-    documentation     inlined godoc
-
 ##about
 
-John Gustafson's `unum` numeric value representation scheme is a tagged value encoding scheme supporting variable physical storage of values. 
+Based on John Gustafson's **unum** ("Right Sizing Precision"), package `unum` provides variable length, tagged value, encoding of numeric values.
 
-This implementation (as of now) only supports unsigned integer values.
+This implementation (as of now) only supports unsigned integers.
 
-### spec
+##spec
 
-The scheme is **byte-aligned**, not word-aligned.
+###`general encoding schema`
 
-     -- bit layout for unsigned integer values
+     byte order:  big-endian
+     tag-bits:    high-order bits of first byte
+     alignment:   byte aligned
      
-     0          2                            *    
-     [ tag-bits | variable length value rep. ]
 
+-------
+    
 
-The 2-bits of the tag determine the value-range and physical length of the image:
+####`UNUM-64`
+
+The 2-bit tag determines the value-range and physical length of the image:
 
 
      tag        | bytes | range
@@ -36,7 +33,77 @@ The 2-bits of the tag determine the value-range and physical length of the image
      -----------+-------+------------------------------------------------
      11         | 8     | uint: (2^30, 2^62] 
 
-### usage
+**examples**
+
+    uint64 :: 0x3b
+    []byte :: {0x3b}
+
+    uint64 :: 0x3bab
+    []byte :: {0x7b, 0xab}
+
+    uint64 :: 0x32febaab
+    []byte :: {0xb2, 0xfe, 0xba, 0xab}
+
+    uint64 :: 0x197f5d552fe8d5bc
+    []byte :: {0xd9, 0x7f, 0x5d, 0x55, 0x2f, 0xe8, 0xd5, 0xbc}
+
+-------
+
+####`UNUM-32`
+
+The 2-bit tag determines the value-range and physical length of the image:
+
+
+     tag        | bytes | range
+     -----------+-------+------------------------------------------------
+     00         | 1     | uint: (0, 2^6] 
+     -----------+-------+------------------------------------------------
+     01         | 2     | uint: (2^6, 2^14] 
+     -----------+-------+------------------------------------------------
+     10         | 3     | uint: (2^14, 2^22] 
+     -----------+-------+------------------------------------------------
+     11         | 4     | uint: (2^22, 2^30] 
+
+**examples**
+
+    uint32 :: 0x3b
+    []byte :: {0x3b}
+
+    uint32 :: 0x3bab
+    []byte :: {0x7b, 0xab}
+
+    uint32 :: 0x2a35c4
+    []byte :: {0xaa, 0x35, 0xc4}
+
+    uint32 :: 0x2fe8d5bc
+    []byte :: {0xef, 0xe8, 0xd5, 0xbc}
+
+-------
+    
+####`UNUM-16`
+
+The 1-bit tag determines the value-range and physical length of the image:
+
+
+     tag        | bytes | range
+     -----------+-------+------------------------------------------------
+     0          | 1     | uint: (0, 2^7] 
+     -----------+-------+------------------------------------------------
+     1          | 2     | uint: (2^7, 2^15] 
+
+**examples**
+
+    uint16 :: 0x4b
+    []byte :: {0x4b}
+
+    uint16 :: 0x42fe
+    []byte :: {0xc2, 0xfe}
+
+-------
+
+## usage
+
+**Note**: Examples below use UNUM-64 encoding but the usage pattern is uniformly applicable.
 
 ####`encode`
 
@@ -50,7 +117,7 @@ The 2-bits of the tag determine the value-range and physical length of the image
     for _, v := range values {
         n, e := unum.EncodeUint(b[offset:], v)
         if e != nil {
-            /* if e is ErrorBufferOverflo you could resize the buffer here */
+            /* if e is ErrorBufferOverflow you could resize the buffer here */
             break
         }
         offset += n
@@ -71,7 +138,7 @@ The 2-bits of the tag determine the value-range and physical length of the image
 
 **using byte array**
  
-    var b []byte = ..           // unum encoded provided by you
+    var b []byte = ..           // unum encoded buffer provided by you
     
     // decoding from a byte buffer
     var offset int
@@ -82,4 +149,28 @@ The 2-bits of the tag determine the value-range and physical length of the image
         }
         offset += n
     }
- 
+    
+---
+
+## License 
+
+    The MIT License (MIT)
+    
+    Copyright (c) 2016 Joubin Muhammad Houshyar
+    
+    Permission is hereby granted, free of charge, to any person obtaining a copy of
+    this software and associated documentation files (the "Software"), to deal in
+    the Software without restriction, including without limitation the rights to
+    use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+    the Software, and to permit persons to whom the Software is furnished to do so,
+    subject to the following conditions:
+    
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+    
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+    FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+    COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+    IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+    CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
