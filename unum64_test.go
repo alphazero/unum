@@ -63,16 +63,30 @@ func BenchmarkDecodeUnum64(b *testing.B) {
 
 func TestCodecUnum64(t *testing.T) {
 	f := func(v uint64) bool {
+		var errorExpected bool
 		if v >= unum.Unum64ValueBound {
-			return true // ignore max values
+			errorExpected = true
 		}
 		var b0 [unum.Unum64Size]byte
 		b := b0[:]
 
 		// encode
-		_, e := unum.EncodeUnum64(b, v)
+		n, e := unum.EncodeUnum64(b, v)
 		if e != nil {
-			t.Errorf("error encoding - v:%d - e:%s\n", v, e.Error())
+			if !errorExpected {
+				t.Errorf("unexpected error encoding - v:%d - e:%s\n", v, e.Error())
+			} else if e != unum.ErrorMaxValue {
+				t.Errorf("expected ErrorMaxValue econding - v:%d - have:%s\n", v, e.Error())
+			}
+			return true
+		} else if errorExpected {
+			t.Errorf("expected error encoding - v:%d\n", v, e.Error())
+		}
+
+		// check encoding size
+		size := unum.Unum64Size
+		if n > size {
+			t.Errorf("encoding size exceeds %d for v:%d - have:%d\n", size, v, n)
 		}
 
 		// decode
