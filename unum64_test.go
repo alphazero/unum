@@ -24,6 +24,8 @@
 package unum_test
 
 import (
+	//	"bytes"
+	"encoding/binary"
 	"math/rand"
 	"testing"
 	"testing/quick"
@@ -86,5 +88,15 @@ func TestCodecUnum64(t *testing.T) {
 	}
 	if e := quick.Check(f, nil); e != nil {
 		t.Error(e)
+	}
+}
+
+func BenchmarkStdlibEncodingPutUvarint(b *testing.B) {
+	v := uint64(rand.Int63n(int64(unum.Unum64ValueBound)))
+	var vb [binary.MaxVarintLen64]byte
+	vb0 := vb[:]
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		binary.PutUvarint(vb0, v)
 	}
 }
