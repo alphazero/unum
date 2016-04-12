@@ -1,4 +1,4 @@
-// friend!
+// Friend!
 
 // The MIT License (MIT)
 //
@@ -24,68 +24,38 @@
 package unum_test
 
 import (
-	//	"bytes"
+	"encoding/binary"
 	"math/rand"
 	"testing"
-	"testing/quick"
 	"unum"
 )
 
-func BenchmarkEncodeUnum64(b *testing.B) {
-	v := uint64(rand.Int63n(int64(unum.Unum64ValueBound)))
-	var vb0 [unum.Unum64Size]byte
-	vb := vb0[:]
+func BenchmarkStdlibEncodingPutUvarint16(b *testing.B) {
+	v := uint64(rand.Intn(int(unum.Unum16ValueBound)))
+	var vb [binary.MaxVarintLen64]byte
+	vb0 := vb[:]
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, e := unum.EncodeUnum64(vb, v)
-		if e != nil {
-			b.Errorf("error encoding - v:%d - e:%s\n", v, e.Error())
-		}
+		binary.PutUvarint(vb0, v)
 	}
 }
 
-func BenchmarkDecodeUnum64(b *testing.B) {
-	v := uint64(rand.Int63n(int64(unum.Unum64ValueBound)))
-	var vb0 [unum.Unum64Size]byte
-	vb := vb0[:]
-	_, e := unum.EncodeUnum64(vb, v)
-	if e != nil {
-		b.Errorf("error encoding - v:%d - e:%s\n", v, e.Error())
-	}
+func BenchmarkStdlibEncodingPutUvarint32(b *testing.B) {
+	v := uint64(rand.Int31n(int32(unum.Unum32ValueBound)))
+	var vb [binary.MaxVarintLen64]byte
+	vb0 := vb[:]
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _, e := unum.DecodeUnum64(vb)
-		if e != nil {
-			b.Errorf("error encoding - v:%d - e:%s\n", v, e.Error())
-		}
+		binary.PutUvarint(vb0, v)
 	}
 }
 
-func TestCodecUnum64(t *testing.T) {
-	f := func(v uint64) bool {
-		if v >= unum.Unum64ValueBound {
-			return true // ignore max values
-		}
-		var b0 [unum.Unum64Size]byte
-		b := b0[:]
-
-		// encode
-		_, e := unum.EncodeUnum64(b, v)
-		if e != nil {
-			t.Errorf("error encoding - v:%d - e:%s\n", v, e.Error())
-		}
-
-		// decode
-		v0, _, e := unum.DecodeUnum64(b)
-		if e != nil {
-			t.Errorf("error decoding - v:%d - e:%s\n", v, e.Error())
-		}
-		if v0 != v {
-			t.Errorf("BUG - v:%08x - v0:%08x\n", v, v0)
-		}
-		return true
-	}
-	if e := quick.Check(f, nil); e != nil {
-		t.Error(e)
+func BenchmarkStdlibEncodingPutUvarint64(b *testing.B) {
+	v := uint64(rand.Int63n(int64(unum.Unum64ValueBound)))
+	var vb [binary.MaxVarintLen64]byte
+	vb0 := vb[:]
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		binary.PutUvarint(vb0, v)
 	}
 }
