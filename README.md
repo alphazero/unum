@@ -1,14 +1,14 @@
 ![image](./resources/unum-logo.png)
 
-##about
+## about
 
 Based on John Gustafson's **unum** ("Right Sizing Precision"), package `unum` provides variable length, tagged value, encoding of numeric values.
 
 This implementation (as of now) only supports unsigned integers.
 
-##spec
+## spec
 
-###`general encoding schema`
+### `general encoding schema`
 
      byte order:  big-endian
      tag-bits:    high-order bits of first byte
@@ -18,7 +18,7 @@ This implementation (as of now) only supports unsigned integers.
 -------
     
 
-####`UNUM-64`
+#### `UNUM-64`
 
 The 2-bit tag determines the value-range and physical length of the image:
 
@@ -49,7 +49,7 @@ The 2-bit tag determines the value-range and physical length of the image:
 
 -------
 
-####`UNUM-32`
+#### `UNUM-32`
 
 The 2-bit tag determines the value-range and physical length of the image:
 
@@ -80,7 +80,7 @@ The 2-bit tag determines the value-range and physical length of the image:
 
 -------
     
-####`UNUM-16`
+#### `UNUM-16`
 
 The 1-bit tag determines the value-range and physical length of the image:
 
@@ -105,7 +105,7 @@ The 1-bit tag determines the value-range and physical length of the image:
 
 **Note**: Examples below use UNUM-64 encoding but the usage pattern is uniformly applicable.
 
-####`encode`
+#### `encode`
 
 **using byte array**
 
@@ -134,7 +134,7 @@ The 1-bit tag determines the value-range and physical length of the image:
 		}
 	}
 	 
-####`decode`
+#### `decode`
 
 **using byte array**
  
